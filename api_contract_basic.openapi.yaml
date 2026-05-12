@@ -1,0 +1,1542 @@
+openapi: 3.0.3
+info:
+  title: 教学事务管理系统基础接口
+  description: 基于当前基础接口契约整理的 OpenAPI 文档，用于导入 Apifox 调试。
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: 本地 Spring Boot 后端服务
+tags:
+  - name: Health
+    description: 健康检查
+  - name: Auth
+    description: 登录与当前用户
+  - name: Common
+    description: 公共查询
+  - name: Admin
+    description: 管理员基础维护
+  - name: Student
+    description: 学生选课、成绩与统计
+  - name: Teacher
+    description: 教师教学管理
+  - name: Statistics
+    description: 统计分析
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: 健康检查
+      operationId: health
+      responses:
+        "200":
+          description: 后端服务正常
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/HealthData"
+
+  /api/health/db:
+    get:
+      tags:
+        - Health
+      summary: 数据库连接检查
+      operationId: databaseHealth
+      responses:
+        "200":
+          description: 数据库连接正常
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DatabaseHealthData"
+
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 用户登录
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LoginUser"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/auth/profile:
+    get:
+      tags:
+        - Auth
+      summary: 查询当前用户信息
+      operationId: profile
+      parameters:
+        - $ref: "#/components/parameters/XUserId"
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedId"
+      responses:
+        "200":
+          description: 当前用户信息
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LoginUser"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/departments:
+    get:
+      tags:
+        - Common
+      summary: 查询院系列表
+      operationId: listDepartments
+      responses:
+        "200":
+          description: 院系列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Department"
+
+  /api/courses:
+    get:
+      tags:
+        - Common
+      summary: 查询课程基础列表
+      operationId: listCourses
+      parameters:
+        - $ref: "#/components/parameters/DeptIdQuery"
+        - $ref: "#/components/parameters/KeywordQuery"
+      responses:
+        "200":
+          description: 课程列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Course"
+
+  /api/admin/students:
+    get:
+      tags:
+        - Admin
+      summary: 查询学生列表
+      operationId: adminListStudents
+      parameters:
+        - $ref: "#/components/parameters/DeptIdQuery"
+        - $ref: "#/components/parameters/KeywordQuery"
+      responses:
+        "200":
+          description: 学生列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Student"
+    post:
+      tags:
+        - Admin
+      summary: 新增学生
+      operationId: adminCreateStudent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentRequest"
+      responses:
+        "200":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Student"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/students/{studentId}:
+    put:
+      tags:
+        - Admin
+      summary: 修改学生
+      operationId: adminUpdateStudent
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          description: 学生编号
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentRequest"
+      responses:
+        "200":
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Student"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/teachers:
+    get:
+      tags:
+        - Admin
+      summary: 查询教师列表
+      operationId: adminListTeachers
+      parameters:
+        - $ref: "#/components/parameters/DeptIdQuery"
+        - $ref: "#/components/parameters/KeywordQuery"
+      responses:
+        "200":
+          description: 教师列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Teacher"
+    post:
+      tags:
+        - Admin
+      summary: 新增教师
+      operationId: adminCreateTeacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherRequest"
+      responses:
+        "200":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Teacher"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/teachers/{staffId}:
+    put:
+      tags:
+        - Admin
+      summary: 修改教师
+      operationId: adminUpdateTeacher
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          description: 教师编号
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherRequest"
+      responses:
+        "200":
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Teacher"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/courses:
+    get:
+      tags:
+        - Admin
+      summary: 查询课程列表
+      operationId: adminListCourses
+      parameters:
+        - $ref: "#/components/parameters/DeptIdQuery"
+        - $ref: "#/components/parameters/KeywordQuery"
+      responses:
+        "200":
+          description: 课程列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Course"
+    post:
+      tags:
+        - Admin
+      summary: 新增课程
+      operationId: adminCreateCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseRequest"
+      responses:
+        "200":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Course"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/courses/{courseId}:
+    put:
+      tags:
+        - Admin
+      summary: 修改课程
+      operationId: adminUpdateCourse
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: 课程编号
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CourseRequest"
+      responses:
+        "200":
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Course"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/classes:
+    get:
+      tags:
+        - Admin
+      summary: 查询开课列表
+      operationId: adminListClasses
+      parameters:
+        - $ref: "#/components/parameters/SemesterQuery"
+        - $ref: "#/components/parameters/CourseIdQuery"
+        - $ref: "#/components/parameters/StaffIdQuery"
+      responses:
+        "200":
+          description: 开课列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ClassInfo"
+    post:
+      tags:
+        - Admin
+      summary: 新增开课
+      operationId: adminCreateClass
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassInfoRequest"
+      responses:
+        "200":
+          description: 新增成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ClassInfo"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/admin/classes/{semester}/{courseId}/{staffId}:
+    put:
+      tags:
+        - Admin
+      summary: 修改开课
+      operationId: adminUpdateClass
+      parameters:
+        - $ref: "#/components/parameters/SemesterPath"
+        - $ref: "#/components/parameters/CourseIdPath"
+        - $ref: "#/components/parameters/StaffIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassInfoUpdateRequest"
+      responses:
+        "200":
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ClassInfo"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/student/classes:
+    get:
+      tags:
+        - Student
+      summary: 查询可选课程
+      operationId: studentListAvailableClasses
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterQueryRequired"
+      responses:
+        "200":
+          description: 可选课程列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StudentClassOption"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/student/selections:
+    get:
+      tags:
+        - Student
+      summary: 查询本人已选课程
+      operationId: studentListSelections
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterQuery"
+      responses:
+        "200":
+          description: 已选课程列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StudentSelectionView"
+    post:
+      tags:
+        - Student
+      summary: 学生选课
+      operationId: studentCreateSelection
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectionRequest"
+      responses:
+        "200":
+          description: 选课成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CourseSelection"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+    delete:
+      tags:
+        - Student
+      summary: 学生退课
+      operationId: studentDeleteSelection
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectionRequest"
+      responses:
+        "200":
+          description: 退课成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/DeleteResult"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/student/grades:
+    get:
+      tags:
+        - Student
+      summary: 查询本人成绩
+      operationId: studentListGrades
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterQuery"
+      responses:
+        "200":
+          description: 成绩列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StudentGradeView"
+
+  /api/student/statistics:
+    get:
+      tags:
+        - Student
+        - Statistics
+      summary: 查询本人基础统计
+      operationId: studentStatistics
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+      responses:
+        "200":
+          description: 学生统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/StudentStatistics"
+
+  /api/student/credit-summary:
+    get:
+      tags:
+        - Student
+        - Statistics
+      summary: 学生学分统计
+      description: 后续可调用 MySQL 存储过程实现。
+      operationId: studentCreditSummary
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+      responses:
+        "200":
+          description: 学分统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/StudentCreditSummary"
+
+  /api/teacher/classes:
+    get:
+      tags:
+        - Teacher
+      summary: 查询本人授课课程
+      operationId: teacherListClasses
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterQuery"
+      responses:
+        "200":
+          description: 授课课程列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TeacherClassView"
+
+  /api/teacher/classes/{semester}/{courseId}/students:
+    get:
+      tags:
+        - Teacher
+      summary: 查询课程学生名单
+      operationId: teacherListClassStudents
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterPath"
+        - $ref: "#/components/parameters/CourseIdPath"
+      responses:
+        "200":
+          description: 学生名单
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TeacherClassStudent"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/teacher/grades:
+    put:
+      tags:
+        - Teacher
+      summary: 录入或修改成绩
+      operationId: teacherUpdateGrade
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GradeUpdateRequest"
+      responses:
+        "200":
+          description: 成绩保存成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CourseSelection"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /api/teacher/statistics:
+    get:
+      tags:
+        - Teacher
+        - Statistics
+      summary: 查询本人教学统计
+      operationId: teacherStatistics
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/XRelatedIdRequired"
+        - $ref: "#/components/parameters/SemesterQuery"
+      responses:
+        "200":
+          description: 教学统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TeacherStatistics"
+
+  /api/admin/statistics/overview:
+    get:
+      tags:
+        - Admin
+        - Statistics
+      summary: 查询管理员首页统计
+      operationId: adminStatisticsOverview
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+      responses:
+        "200":
+          description: 管理员首页统计
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AdminOverviewStatistics"
+
+  /api/admin/statistics/course-grades:
+    get:
+      tags:
+        - Admin
+        - Statistics
+      summary: 查询课程成绩统计
+      operationId: adminCourseGradeStatistics
+      parameters:
+        - $ref: "#/components/parameters/XRole"
+        - $ref: "#/components/parameters/SemesterQuery"
+        - $ref: "#/components/parameters/CourseIdQuery"
+      responses:
+        "200":
+          description: 课程成绩统计列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ResultBase"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CourseGradeStatistics"
+
+components:
+  parameters:
+    XUserId:
+      name: X-User-Id
+      in: header
+      required: true
+      description: 当前登录账号 ID
+      schema:
+        type: string
+    XRole:
+      name: X-Role
+      in: header
+      required: true
+      description: 当前登录角色
+      schema:
+        $ref: "#/components/schemas/Role"
+    XRelatedId:
+      name: X-Related-Id
+      in: header
+      required: false
+      description: 关联学生编号或教师编号
+      schema:
+        type: string
+    XRelatedIdRequired:
+      name: X-Related-Id
+      in: header
+      required: true
+      description: 关联学生编号或教师编号
+      schema:
+        type: string
+    DeptIdQuery:
+      name: deptId
+      in: query
+      required: false
+      description: 院系编号
+      schema:
+        type: string
+    KeywordQuery:
+      name: keyword
+      in: query
+      required: false
+      description: 模糊查询关键字
+      schema:
+        type: string
+    SemesterQuery:
+      name: semester
+      in: query
+      required: false
+      description: 学期，例如 201202
+      schema:
+        type: string
+    SemesterQueryRequired:
+      name: semester
+      in: query
+      required: true
+      description: 学期，例如 201202
+      schema:
+        type: string
+    CourseIdQuery:
+      name: courseId
+      in: query
+      required: false
+      description: 课程编号
+      schema:
+        type: string
+    StaffIdQuery:
+      name: staffId
+      in: query
+      required: false
+      description: 教师编号
+      schema:
+        type: string
+    SemesterPath:
+      name: semester
+      in: path
+      required: true
+      description: 学期
+      schema:
+        type: string
+    CourseIdPath:
+      name: courseId
+      in: path
+      required: true
+      description: 课程编号
+      schema:
+        type: string
+    StaffIdPath:
+      name: staffId
+      in: path
+      required: true
+      description: 教师编号
+      schema:
+        type: string
+
+  responses:
+    ErrorResponse:
+      description: 业务错误或系统错误
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResult"
+
+  schemas:
+    Role:
+      type: string
+      enum:
+        - ADMIN
+        - TEACHER
+        - STUDENT
+
+    ResultBase:
+      type: object
+      required:
+        - code
+        - message
+        - data
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: success
+        data:
+          nullable: true
+
+    ErrorResult:
+      type: object
+      required:
+        - code
+        - message
+        - data
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: 参数错误
+        data:
+          nullable: true
+          example: null
+
+    HealthData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        message:
+          type: string
+          example: 教学事务管理系统后端运行正常
+
+    DatabaseHealthData:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        message:
+          type: string
+          example: 数据库连接正常
+        departmentCount:
+          type: integer
+          format: int64
+          example: 3
+
+    Department:
+      type: object
+      properties:
+        deptId:
+          type: string
+          example: "01"
+        deptName:
+          type: string
+          example: 计算机学院
+        address:
+          type: string
+          nullable: true
+          example: 上大东校区三号楼
+        phoneCode:
+          type: string
+          nullable: true
+          example: "65347567"
+
+    Student:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        name:
+          type: string
+          example: 刘晓明
+        sex:
+          type: string
+          nullable: true
+          enum:
+            - 男
+            - 女
+          example: 男
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+          example: "1992-12-08"
+        nativePlace:
+          type: string
+          nullable: true
+          example: 安徽
+        mobilePhone:
+          type: string
+          nullable: true
+          example: "18913457890"
+        deptId:
+          type: string
+          nullable: true
+          example: "01"
+        status:
+          type: string
+          nullable: true
+          example: 在读
+
+    StudentRequest:
+      allOf:
+        - $ref: "#/components/schemas/Student"
+      required:
+        - studentId
+        - name
+
+    Teacher:
+      type: object
+      properties:
+        staffId:
+          type: string
+          example: "0101"
+        name:
+          type: string
+          example: 陈迪茂
+        sex:
+          type: string
+          nullable: true
+          enum:
+            - 男
+            - 女
+          example: 男
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+          example: "1983-03-06"
+        professionalTitle:
+          type: string
+          nullable: true
+          example: 副教授
+        salary:
+          type: number
+          format: double
+          nullable: true
+          example: 7567.00
+        deptId:
+          type: string
+          nullable: true
+          example: "01"
+
+    TeacherRequest:
+      allOf:
+        - $ref: "#/components/schemas/Teacher"
+      required:
+        - staffId
+        - name
+
+    Course:
+      type: object
+      properties:
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        credit:
+          type: integer
+          nullable: true
+          example: 4
+        creditHours:
+          type: integer
+          nullable: true
+          example: 50
+        deptId:
+          type: string
+          nullable: true
+          example: "01"
+
+    CourseRequest:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+      required:
+        - courseId
+        - courseName
+
+    ClassInfo:
+      type: object
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        staffId:
+          type: string
+          example: "0101"
+        classTime:
+          type: string
+          nullable: true
+          example: 星期三1-4
+
+    ClassInfoRequest:
+      allOf:
+        - $ref: "#/components/schemas/ClassInfo"
+      required:
+        - semester
+        - courseId
+        - staffId
+
+    ClassInfoUpdateRequest:
+      type: object
+      properties:
+        classTime:
+          type: string
+          nullable: true
+          example: 星期三1-4
+
+    CourseSelection:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        staffId:
+          type: string
+          example: "0101"
+        score:
+          type: integer
+          nullable: true
+          example: 82
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+        - role
+      properties:
+        username:
+          type: string
+          example: "1102"
+        password:
+          type: string
+          format: password
+          example: "123456"
+        role:
+          $ref: "#/components/schemas/Role"
+
+    LoginUser:
+      type: object
+      properties:
+        userId:
+          type: string
+          example: U1102
+        username:
+          type: string
+          example: "1102"
+        role:
+          $ref: "#/components/schemas/Role"
+        relatedId:
+          type: string
+          nullable: true
+          example: "1102"
+        displayName:
+          type: string
+          example: 刘晓明
+
+    SelectionRequest:
+      type: object
+      required:
+        - semester
+        - courseId
+        - staffId
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        staffId:
+          type: string
+          example: "0101"
+
+    DeleteResult:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+          example: true
+
+    StudentClassOption:
+      type: object
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        credit:
+          type: integer
+          example: 4
+        creditHours:
+          type: integer
+          example: 50
+        staffId:
+          type: string
+          example: "0101"
+        teacherName:
+          type: string
+          example: 陈迪茂
+        classTime:
+          type: string
+          example: 星期三1-4
+        selected:
+          type: boolean
+          example: false
+
+    StudentSelectionView:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        credit:
+          type: integer
+          example: 4
+        staffId:
+          type: string
+          example: "0101"
+        teacherName:
+          type: string
+          example: 陈迪茂
+        classTime:
+          type: string
+          example: 星期三1-4
+        score:
+          type: integer
+          nullable: true
+          example: 82
+
+    StudentGradeView:
+      type: object
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        credit:
+          type: integer
+          example: 4
+        staffId:
+          type: string
+          example: "0101"
+        teacherName:
+          type: string
+          example: 陈迪茂
+        score:
+          type: integer
+          nullable: true
+          example: 82
+        passed:
+          type: boolean
+          nullable: true
+          example: true
+
+    StudentStatistics:
+      type: object
+      properties:
+        selectedCourseCount:
+          type: integer
+          example: 5
+        gradedCourseCount:
+          type: integer
+          example: 3
+        passedCourseCount:
+          type: integer
+          example: 2
+        failedCourseCount:
+          type: integer
+          example: 1
+        earnedCredits:
+          type: integer
+          example: 8
+        averageScore:
+          type: number
+          format: double
+          nullable: true
+          example: 75.5
+
+    StudentCreditSummary:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        passedCourseCount:
+          type: integer
+          example: 2
+        earnedCredits:
+          type: integer
+          example: 8
+        averageScore:
+          type: number
+          format: double
+          nullable: true
+          example: 86.0
+
+    TeacherClassView:
+      type: object
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        credit:
+          type: integer
+          example: 4
+        staffId:
+          type: string
+          example: "0101"
+        classTime:
+          type: string
+          example: 星期三1-4
+        studentCount:
+          type: integer
+          example: 4
+
+    TeacherClassStudent:
+      type: object
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        studentName:
+          type: string
+          example: 刘晓明
+        sex:
+          type: string
+          nullable: true
+          example: 男
+        deptId:
+          type: string
+          nullable: true
+          example: "01"
+        mobilePhone:
+          type: string
+          nullable: true
+          example: "18913457890"
+        score:
+          type: integer
+          nullable: true
+          example: 82
+
+    GradeUpdateRequest:
+      type: object
+      required:
+        - studentId
+        - semester
+        - courseId
+        - score
+      properties:
+        studentId:
+          type: string
+          example: "1102"
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 82
+
+    TeacherStatistics:
+      type: object
+      properties:
+        classCount:
+          type: integer
+          example: 2
+        studentCount:
+          type: integer
+          example: 10
+        gradedCount:
+          type: integer
+          example: 6
+        ungradedCount:
+          type: integer
+          example: 4
+        averageScore:
+          type: number
+          format: double
+          nullable: true
+          example: 78.5
+        failedCount:
+          type: integer
+          example: 1
+
+    AdminOverviewStatistics:
+      type: object
+      properties:
+        departmentCount:
+          type: integer
+          example: 3
+        studentCount:
+          type: integer
+          example: 7
+        teacherCount:
+          type: integer
+          example: 4
+        courseCount:
+          type: integer
+          example: 6
+        classCount:
+          type: integer
+          example: 8
+        selectionCount:
+          type: integer
+          example: 45
+
+    CourseGradeStatistics:
+      type: object
+      properties:
+        semester:
+          type: string
+          example: "201202"
+        courseId:
+          type: string
+          example: "08305002"
+        courseName:
+          type: string
+          example: 数据库原理
+        studentCount:
+          type: integer
+          example: 6
+        gradedCount:
+          type: integer
+          example: 3
+        averageScore:
+          type: number
+          format: double
+          nullable: true
+          example: 74.33
+        maxScore:
+          type: integer
+          nullable: true
+          example: 82
+        minScore:
+          type: integer
+          nullable: true
+          example: 66
+        failedCount:
+          type: integer
+          example: 0
