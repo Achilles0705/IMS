@@ -28,15 +28,16 @@ MySQL school 数据库
 
 ### 2.1 前端
 
-前端采用 `Vue` 实现，负责页面展示、用户交互、表单提交、接口调用和基础路由控制。
+前端采用 `Vue 3 + Vite + Element Plus` 实现，负责页面展示、用户交互、表单提交、接口调用、路由控制与基础权限拦截。
 
 前端主要职责：
 
-- 登录页面与用户身份保存。
-- 根据角色展示不同菜单。
-- 管理员、教师、学生对应页面。
-- 调用后端 REST API 获取和提交数据。
-- 展示课程、成绩、选课、统计分析等信息。
+- 提供登录、退出、个人信息展示页面，维护当前会话状态。
+- 根据角色（管理员、教师、学生）动态展示菜单与可访问路由。
+- 提供管理员、教师、学生三类业务页面（表格、表单、统计图表容器）。
+- 统一封装接口请求，调用后端 REST API 获取和提交数据。
+- 统一处理加载状态、成功提示、错误提示和异常页面（403、404）。
+- 基于 Element Plus 实现一致的界面风格与表单校验体验。
 
 ### 2.2 后端
 
@@ -80,14 +81,20 @@ MySQL school 数据库
 
 | 层次 | 技术 |
 | --- | --- |
-| 前端 | Vue |
+| 前端框架 | Vue 3 |
+| 前端 UI 组件库 | Element Plus |
+| 前端路由 | Vue Router |
+| 前端状态管理 | Pinia |
+| 前端 HTTP 客户端 | Axios |
+| 前端构建工具 | Vite |
 | 后端语言 | Java |
 | 后端框架 | Spring Boot |
 | Web 接口 | Spring MVC / REST API |
 | ORM / 数据访问 | MyBatis-Plus |
 | 数据库 | MySQL |
 | 数据传输格式 | JSON |
-| 构建工具 | Maven |
+| 后端构建工具 | Maven |
+| 前端包管理 | npm |
 
 暂不引入的组件：
 
@@ -97,6 +104,147 @@ MySQL school 数据库
 - 暂不引入消息队列。
 
 角色权限先采用后端自定义登录校验和角色判断实现，保持系统复杂度可控。
+
+### 3.1 前端工程目录建议（Vue 3 + Element Plus）
+
+```text
+frontend
+  ├── public
+  ├── src
+  │   ├── api
+  │   │   ├── auth.ts
+  │   │   ├── admin.ts
+  │   │   ├── student.ts
+  │   │   ├── teacher.ts
+  │   │   └── statistics.ts
+  │   ├── assets
+  │   ├── components
+  │   │   ├── common
+  │   │   └── business
+  │   ├── layout
+  │   ├── router
+  │   │   ├── index.ts
+  │   │   └── guards.ts
+  │   ├── stores
+  │   │   ├── auth.ts
+  │   │   ├── app.ts
+  │   │   └── dict.ts
+  │   ├── utils
+  │   │   ├── request.ts
+  │   │   ├── storage.ts
+  │   │   └── constants.ts
+  │   ├── views
+  │   │   ├── login
+  │   │   ├── admin
+  │   │   ├── student
+  │   │   ├── teacher
+  │   │   └── error
+  │   ├── App.vue
+  │   └── main.ts
+  ├── .env.development
+  ├── .env.production
+  ├── package.json
+  └── vite.config.ts
+```
+
+目录划分原则：
+
+- `views` 只放页面级组件（路由入口）。
+- `components` 放可复用业务组件和通用组件。
+- `api` 按角色与业务域拆分接口函数，不在页面里直接写请求地址。
+- `stores` 统一维护全局状态，避免组件层层传参。
+- `utils/request.ts` 统一处理请求头、响应解析、错误提示。
+
+### 3.2 前端分层设计
+
+前端建议采用“页面层 + 组件层 + 状态层 + 接口层 + 基础设施层”结构：
+
+1. 页面层（`views`）：组织页面布局、绑定交互事件，不直接写底层请求细节。
+2. 组件层（`components`）：沉淀可复用业务组件，例如课程选择表格、成绩录入弹窗。
+3. 状态层（`stores`）：保存用户身份、菜单状态、全局字典数据等跨页面共享状态。
+4. 接口层（`api`）：按接口契约封装 API 函数，对齐 `api_contract_basic.md`。
+5. 基础设施层（`utils`、`router`）：封装 Axios 实例、路由守卫、常量与存储工具。
+
+这种分层方式与后端的 Controller / Service / Mapper 思路一致，便于后端开发者理解与维护。
+
+### 3.3 路由与权限控制（前端侧）
+
+路由建议按“公共路由 + 角色路由”组织：
+
+- 公共路由：`/login`、`/403`、`/404`。
+- 管理员路由前缀：`/admin/*`。
+- 教师路由前缀：`/teacher/*`。
+- 学生路由前缀：`/student/*`。
+
+每个业务路由在 `meta` 中标记允许角色，例如：
+
+```text
+meta: { roles: ['ADMIN'] }
+```
+
+守卫流程建议：
+
+1. 进入路由前读取 `authStore` 中的登录状态和角色。
+2. 未登录用户统一跳转登录页。
+3. 已登录但角色不匹配时跳转 403 页面。
+4. 前端仅做体验层拦截，真正权限校验仍以后端接口返回结果为准。
+
+### 3.4 状态管理方案（Pinia）
+
+建议最少建立以下 Store：
+
+| Store | 主要状态 | 说明 |
+| --- | --- | --- |
+| `authStore` | `token`、`role`、`userId`、`profile` | 登录态和用户信息 |
+| `appStore` | `sidebarCollapsed`、`activeMenu`、`breadcrumbs` | 布局和导航状态 |
+| `dictStore` | `departments`、`semesters` 等基础字典 | 减少重复请求 |
+
+会话持久化建议：
+
+- `token`、`role` 可持久化到 `localStorage` 或 `sessionStorage`。
+- 页面刷新后通过 `/api/auth/profile` 重新拉取用户信息。
+- 敏感权限判断必须以后端为准，前端持久化仅用于体验优化。
+
+### 3.5 接口调用与错误处理规范
+
+统一在 `utils/request.ts` 创建 Axios 实例，约定：
+
+- `baseURL` 使用 `/api`，通过 Vite 代理转发到后端 `http://localhost:8080`。
+- 请求拦截器统一附加登录凭证和角色标识（按后端契约字段传递）。
+- 响应拦截器按后端 `Result<T>` 结构统一判断 `code` 和 `message`。
+- 对常见错误（401、403、500、网络超时）给出统一提示并按需跳转。
+
+接口文件组织建议：
+
+- `api/auth.ts`：登录、退出、个人信息。
+- `api/admin.ts`：管理员数据维护相关接口。
+- `api/student.ts`：选课、退课、成绩、统计接口。
+- `api/teacher.ts`：授课班级、成绩录入、教学统计接口。
+- `api/statistics.ts`：跨角色统计查询接口（如后续需要）。
+
+### 3.6 页面模块规划（对应三类角色）
+
+| 角色 | 页面模块建议 |
+| --- | --- |
+| 系统管理员 | 学生管理、教师管理、课程管理、开课管理、选课结果查询、统计分析 |
+| 教师 | 授课课程列表、课程学生名单、成绩录入/修改、教学统计 |
+| 学生 | 开课查询、我的选课、退课、成绩查询、个人学分统计 |
+
+通用页面建议：
+
+- 登录页、首页仪表盘、个人中心、403 页面、404 页面。
+- 列表页优先使用 Element Plus 的 `el-table + el-pagination`。
+- 表单页优先使用 `el-form` 及内置校验规则。
+
+### 3.7 前端开发顺序建议（适合后端开发者）
+
+1. 初始化 `Vue 3 + Vite + TypeScript` 项目，安装 `element-plus`、`vue-router`、`pinia`、`axios`。
+2. 搭建基础布局（顶部/侧边栏）与路由骨架，先完成登录、退出、403、404。
+3. 封装请求层（Axios）与统一错误处理，对接 `auth` 相关接口。
+4. 完成管理员模块基础增删改查页面，优先打通“列表 + 表单 + 分页”通用模式。
+5. 完成学生模块（开课查询、选课、退课、成绩与统计）。
+6. 完成教师模块（授课查询、学生名单、成绩录入与统计）。
+7. 统一优化交互细节（加载态、空状态、二次确认、表单校验）并开展联调。
 
 ## 4. 后端 MVC 架构设计
 
@@ -519,14 +667,14 @@ Result<T>
 10. 实现统计分析。
 11. 新增并调用存储过程。
 12. 新增并验证触发器。
-13. 与 Vue 前端联调。
+13. 与 Vue 3 + Element Plus 前端联调。
 
 ## 13. 最终推荐方案
 
 本项目最终推荐采用：
 
 ```text
-Vue 前端 + Spring Boot 后端 REST API + MVC 架构 + MyBatis-Plus + MySQL
+Vue 3 + Element Plus 前端 + Spring Boot 后端 REST API + MVC 架构 + MyBatis-Plus + MySQL
 ```
 
 后端保持单体应用结构，不引入复杂中间件。系统通过 Controller、Service、Mapper 三层完成业务开发，通过 MySQL 存储过程和触发器满足数据库课程设计要求，通过角色字段和后端业务判断实现系统管理员、教师、学生三类权限控制。

@@ -1,0 +1,5 @@
+export * from '@/api/admin/students'
+export * from '@/api/admin/teachers'
+export * from '@/api/admin/courses'
+export * from '@/api/admin/classes'
+export * from '@/api/admin/statistics'

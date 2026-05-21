@@ -2,7 +2,7 @@
 
 基于 B/S 架构的学分制教学事务管理系统。浏览器通过前端页面访问后端 REST API，后端连接 MySQL `school` 数据库完成教务业务。
 
-**技术栈：** Vue 3（前端，规划中）+ Spring Boot 3.3.5 + MyBatis-Plus 3.5.7 + MySQL 8.x
+**技术栈：** Vue 3 + Element Plus + Pinia + Vue Router + Spring Boot 3.3.5 + MyBatis-Plus 3.5.7 + MySQL 8.x
 
 ---
 
@@ -61,17 +61,46 @@ http://localhost:8080
 | `GET http://localhost:8080/api/health` | 检查后端是否运行 |
 | `GET http://localhost:8080/api/health/db` | 检查数据库连接是否正常 |
 
-### 3. 启动前端（规划中）
+### 3. 启动前端
 
-前端将放在 `frontend` 目录，计划使用 **Vue 3 + Vite**。当前前端尚未创建，待项目初始化后可按以下方式启动（示例）：
+前端已位于 `frontend` 目录，基于 **Vue 3 + Vite + Element Plus** 搭建，包含角色路由、Pinia 登录态和全接口请求封装骨架。
+
+#### 3.1 安装依赖
 
 ```bash
 cd frontend
 npm install
+```
+
+#### 3.2 启动开发环境
+
+```bash
 npm run dev
 ```
 
-开发环境下前端会通过 HTTP 请求访问 `http://localhost:8080` 的后端 API。具体端口与代理配置以后端接口契约为准（见 [api_contract_basic.md](api_contract_basic.md)）。
+默认访问地址（Vite）：
+
+```text
+http://localhost:5173
+```
+
+开发环境代理说明：
+
+- 前端请求基础路径为 `VITE_API_BASE_URL=/api`。
+- `vite.config.ts` 已将 `/api` 代理到 `http://localhost:8080`（可通过 `VITE_BACKEND_PROXY_TARGET` 调整）。
+- 因此前端调用 `/api/*` 时会自动转发到后端服务。
+
+#### 3.3 生产构建与预览
+
+```bash
+npm run build
+npm run preview
+```
+
+常见问题：
+
+- 若启动时报 Node 版本不兼容，请优先使用 Node.js 22.x（见 [environment_versions.md](environment_versions.md)）。
+- 若接口请求失败，先确认后端 `http://localhost:8080` 已正常启动。
 
 ### 4. 访问系统
 
@@ -106,8 +135,18 @@ IMS/
 │       │   └── util/                # 工具类（预留）
 │       └── resources/
 │           └── application.yml       # 端口、数据源、MyBatis-Plus 等配置
-├── frontend/                         # 前端 Vue 项目（规划中，目录待创建）
-│   └── （页面、路由、组件、接口封装等）
+├── frontend/                         # 前端 Vue 3 + Element Plus 项目
+│   ├── src/
+│   │   ├── api/                     # 按契约封装的全部接口
+│   │   ├── router/                  # 路由与权限守卫
+│   │   ├── stores/                  # Pinia 全局状态
+│   │   ├── layout/                  # 主布局
+│   │   ├── views/                   # 管理员/教师/学生页面骨架
+│   │   ├── utils/                   # request/storage 等基础设施
+│   │   └── types/                   # 契约类型定义
+│   ├── .env.development             # 开发环境变量
+│   ├── .env.production              # 生产环境变量
+│   └── vite.config.ts               # Vite 与 API 代理配置
 ├── architecture_plan.md            # 系统架构、角色权限、数据库扩展与开发顺序
 ├── school_schema.md                  # school 数据库现有表/视图结构说明
 ├── environment_versions.md           # 本机开发环境版本记录
@@ -147,22 +186,21 @@ IMS/
 
 完整接口列表以 [api_contract_basic.md](api_contract_basic.md) 为准。
 
-### `frontend` 前端（规划中）
+### `frontend` 前端
 
-前端目录用于存放 Vue 3 单页应用，预期职责包括：
+前端目录已完成基础骨架，当前职责包括：
 
 - 登录与角色识别（系统管理员、教师、学生）
 - 按角色展示不同菜单与页面
 - 调用后端 `/api` 接口完成选课、成绩录入、查询与统计展示
-- 与 `api_contract_basic.md` 中的接口契约保持一致
+- 与 `api_contract_basic.md` 和 `api_contract_basic.openapi.yaml` 中的接口契约保持一致
 
-初始化前端时建议在项目根目录执行（示例）：
+当前前端特性：
 
-```bash
-npm create vite@latest frontend -- --template vue
-```
-
-具体命令与依赖版本可在创建时根据 [environment_versions.md](environment_versions.md) 调整。
+- 已完成管理员、教师、学生三类菜单与页面路由骨架。
+- 已完成 Axios 请求层和统一 `Result<T>` 响应解析。
+- 已封装全部基础接口（含 `GET /api/student/credit-summary` 预留接口）。
+- 页面以“列表 + 表单 + 统计容器”为主，便于后续逐步补全业务细节。
 
 ---
 
