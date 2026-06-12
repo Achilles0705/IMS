@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-import { studentCreateSelection, studentListAvailableClasses } from '@/api/student'
+import { studentCreateSelection, studentListAvailableClasses, studentListGrades, studentListSelections } from '@/api/student'
 import PageContainer from '@/components/common/PageContainer.vue'
 import type { SelectionRequest, StudentClassOption } from '@/types/api'
 import { ApiBusinessError } from '@/utils/request'
+import { uniqueSemestersFrom } from '@/utils/semester'
 
 const loading = ref(false)
 const classes = ref<StudentClassOption[]>([])
+const semesterSource = ref<Array<{ semester: string }>>([])
 
 const query = reactive({
   semester: '',
@@ -20,9 +22,32 @@ const selectionModel = reactive<SelectionRequest>({
   staffId: '',
 })
 
+const selectedClassKey = ref('')
+
+const semesterOptions = computed(() => uniqueSemestersFrom(semesterSource.value, (item) => item.semester))
+
+const classSelectOptions = computed(() =>
+  classes.value.map((item) => ({
+    key: `${item.courseId}|${item.staffId}`,
+    label: `${item.courseName} - ${item.teacherName}`,
+    item,
+  })),
+)
+
+async function loadSemesterOptions() {
+  try {
+    const [selections, grades] = await Promise.all([studentListSelections(), studentListGrades()])
+    semesterSource.value = [...selections, ...grades]
+  } catch (error) {
+    if (error instanceof ApiBusinessError) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
 async function loadClasses() {
   if (!query.semester) {
-    ElMessage.warning('请输入学期后再查询')
+    ElMessage.warning('请先选择学期')
     return
   }
 
@@ -30,6 +55,9 @@ async function loadClasses() {
   try {
     classes.value = await studentListAvailableClasses({ semester: query.semester })
     selectionModel.semester = query.semester
+    selectedClassKey.value = ''
+    selectionModel.courseId = ''
+    selectionModel.staffId = ''
   } catch (error) {
     if (error instanceof ApiBusinessError) {
       ElMessage.error(error.message)
@@ -45,18 +73,32 @@ function chooseClass(row: StudentClassOption) {
   selectionModel.semester = row.semester
   selectionModel.courseId = row.courseId
   selectionModel.staffId = row.staffId
+  selectedClassKey.value = `${row.courseId}|${row.staffId}`
+}
+
+function handleClassSelect(key: string) {
+  if (!key) {
+    selectionModel.courseId = ''
+    selectionModel.staffId = ''
+    return
+  }
+  const option = classSelectOptions.value.find((item) => item.key === key)
+  if (option) {
+    chooseClass(option.item)
+  }
 }
 
 async function selectClass() {
   if (!selectionModel.semester || !selectionModel.courseId || !selectionModel.staffId) {
-    ElMessage.warning('请选择一条课程记录再选课')
+    ElMessage.warning('请先选择要选修的课程')
     return
   }
 
   try {
     await studentCreateSelection(selectionModel)
-    ElMessage.success('选课请求已发送')
+    ElMessage.success('选课成功')
     await loadClasses()
+    await loadSemesterOptions()
   } catch (error) {
     if (error instanceof ApiBusinessError) {
       ElMessage.error(error.message)
@@ -65,17 +107,42 @@ async function selectClass() {
     ElMessage.error('选课失败')
   }
 }
+
+watch(
+  () => query.semester,
+  (semester) => {
+    if (semester) {
+      loadClasses()
+    } else {
+      classes.value = []
+    }
+  },
+)
+
+onMounted(async () => {
+  await loadSemesterOptions()
+})
 </script>
 
 <template>
-  <PageContainer title="可选课程" description="对应 /api/student/classes 与 /api/student/selections(POST) 的页面骨架。">
+  <PageContainer title="可选课程" description="按学期查询可选课程并完成选课。">
     <el-card>
       <el-form :inline="true">
         <el-form-item label="学期">
-          <el-input v-model="query.semester" placeholder="例如 2025-Fall" style="width: 180px" />
+          <el-select
+            v-model="query.semester"
+            filterable
+            allow-create
+            default-first-option
+            clearable
+            placeholder="请选择学期"
+            style="width: 180px"
+          >
+            <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadClasses">查询可选课程</el-button>
+          <el-button type="primary" :disabled="!query.semester" @click="loadClasses">查询可选课程</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -97,19 +164,27 @@ async function selectClass() {
     </el-card>
 
     <el-card>
-      <template #header>选课提交（骨架）</template>
-      <el-form :model="selectionModel" inline>
-        <el-form-item label="semester">
-          <el-input v-model="selectionModel.semester" style="width: 140px" />
-        </el-form-item>
-        <el-form-item label="courseId">
-          <el-input v-model="selectionModel.courseId" style="width: 140px" />
-        </el-form-item>
-        <el-form-item label="staffId">
-          <el-input v-model="selectionModel.staffId" style="width: 140px" />
+      <template #header>选课提交</template>
+      <el-form inline>
+        <el-form-item label="课程">
+          <el-select
+            v-model="selectedClassKey"
+            clearable
+            placeholder="请选择课程"
+            style="width: 320px"
+            :disabled="!classes.length"
+            @change="handleClassSelect"
+          >
+            <el-option
+              v-for="item in classSelectOptions"
+              :key="item.key"
+              :label="item.label"
+              :value="item.key"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="selectClass">调用选课接口</el-button>
+          <el-button type="primary" :disabled="!selectedClassKey" @click="selectClass">确认选课</el-button>
         </el-form-item>
       </el-form>
     </el-card>

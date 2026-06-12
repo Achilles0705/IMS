@@ -31,7 +31,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageContainer title="教师首页" description="展示教师教学统计概览，后续可扩展成绩分布图。">
+  <PageContainer title="教师首页" description="展示教师教学统计概览。">
     <el-card v-loading="loading">
       <div class="skeleton-grid">
         <el-statistic title="授课班级数" :value="stats?.classCount ?? 0" />

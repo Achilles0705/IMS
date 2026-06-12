@@ -6,6 +6,7 @@ import { adminCreateCourse, adminListCourses, adminUpdateCourse } from '@/api/ad
 import PageContainer from '@/components/common/PageContainer.vue'
 import { useDictStore } from '@/stores/dict'
 import type { Course, CourseRequest } from '@/types/api'
+import { getDeptName } from '@/utils/dict'
 import { ApiBusinessError } from '@/utils/request'
 
 const dictStore = useDictStore()
@@ -83,7 +84,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <PageContainer title="课程管理" description="对应 /api/admin/courses 的查询、新增、修改接口骨架。">
+  <PageContainer title="课程管理" description="维护课程信息，支持查询、新增与修改。">
     <el-card>
       <el-form :inline="true">
         <el-form-item label="院系">
@@ -111,12 +112,16 @@ onMounted(async () => {
         <el-table-column prop="courseName" label="课程名称" min-width="220" />
         <el-table-column prop="credit" label="学分" width="100" />
         <el-table-column prop="creditHours" label="学时" width="100" />
-        <el-table-column prop="deptId" label="院系" width="120" />
+        <el-table-column label="院系" width="160">
+          <template #default="{ row }">
+            {{ getDeptName(row.deptId, dictStore.departments) }}
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
 
     <el-card>
-      <template #header>新增/修改（骨架表单）</template>
+      <template #header>新增/修改</template>
       <el-form :model="editModel" label-width="100">
         <el-form-item label="课程编号">
           <el-input v-model="editModel.courseId" placeholder="courseId" />
@@ -141,8 +146,8 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="createCourse">调用新增接口</el-button>
-          <el-button @click="updateCourse">调用修改接口</el-button>
+          <el-button type="primary" @click="createCourse">新增</el-button>
+          <el-button @click="updateCourse">保存修改</el-button>
         </el-form-item>
       </el-form>
     </el-card>

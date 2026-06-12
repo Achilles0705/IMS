@@ -31,7 +31,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageContainer title="个人统计" description="对应 /api/student/statistics 查询接口骨架。">
+  <PageContainer title="个人统计" description="查看选课、成绩与学分等个人学习统计。">
     <el-card v-loading="loading">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="已选课程数">{{ stats?.selectedCourseCount ?? 0 }}</el-descriptions-item>

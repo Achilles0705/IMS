@@ -33,7 +33,7 @@ onMounted(() => {
 <template>
   <PageContainer
     title="学分汇总"
-    description="对应 /api/student/credit-summary 预留接口，后续可对接存储过程统计。"
+    description="查看已通过课程、已获得学分与平均成绩汇总。"
   >
     <el-card v-loading="loading">
       <el-descriptions :column="2" border>

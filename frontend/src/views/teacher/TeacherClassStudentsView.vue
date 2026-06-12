@@ -1,25 +1,52 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { teacherListClassStudents } from '@/api/teacher'
+import { teacherListClasses, teacherListClassStudents } from '@/api/teacher'
 import PageContainer from '@/components/common/PageContainer.vue'
-import type { TeacherClassStudent } from '@/types/api'
+import type { TeacherClassStudent, TeacherClassView } from '@/types/api'
 import { ApiBusinessError } from '@/utils/request'
+import { uniqueSemestersFrom } from '@/utils/semester'
 
 const route = useRoute()
 const loading = ref(false)
+const classLoading = ref(false)
 const students = ref<TeacherClassStudent[]>([])
+const teacherClasses = ref<TeacherClassView[]>([])
 
 const query = reactive({
   semester: '',
   courseId: '',
 })
 
+const semesterOptions = computed(() => uniqueSemestersFrom(teacherClasses.value, (item) => item.semester))
+
+const courseOptions = computed(() => {
+  if (!query.semester) {
+    return []
+  }
+  return teacherClasses.value.filter((item) => item.semester === query.semester)
+})
+
+async function loadTeacherClasses() {
+  classLoading.value = true
+  try {
+    teacherClasses.value = await teacherListClasses()
+  } catch (error) {
+    if (error instanceof ApiBusinessError) {
+      ElMessage.error(error.message)
+      return
+    }
+    ElMessage.error('加载授课课程失败')
+  } finally {
+    classLoading.value = false
+  }
+}
+
 async function loadStudents() {
   if (!query.semester || !query.courseId) {
-    ElMessage.warning('请先填写 semester 和 courseId')
+    ElMessage.warning('请先选择学期和课程')
     return
   }
 
@@ -37,7 +64,23 @@ async function loadStudents() {
   }
 }
 
-onMounted(() => {
+function handleSemesterChange() {
+  query.courseId = ''
+  students.value = []
+}
+
+watch(
+  () => query.courseId,
+  (courseId) => {
+    if (query.semester && courseId) {
+      loadStudents()
+    }
+  },
+)
+
+onMounted(async () => {
+  await loadTeacherClasses()
+
   const semester = route.params.semester
   const courseId = route.params.courseId
 
@@ -49,7 +92,7 @@ onMounted(() => {
   }
 
   if (query.semester && query.courseId) {
-    loadStudents()
+    await loadStudents()
   }
 })
 </script>
@@ -57,18 +100,41 @@ onMounted(() => {
 <template>
   <PageContainer
     title="课程学生名单"
-    description="对应 /api/teacher/classes/{semester}/{courseId}/students 查询接口骨架。"
+    description="查看指定课程的学生名单及成绩。"
   >
-    <el-card>
+    <el-card v-loading="classLoading">
       <el-form :inline="true">
-        <el-form-item label="semester">
-          <el-input v-model="query.semester" placeholder="semester" style="width: 180px" />
+        <el-form-item label="学期">
+          <el-select
+            v-model="query.semester"
+            clearable
+            placeholder="请选择学期"
+            style="width: 180px"
+            @change="handleSemesterChange"
+          >
+            <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="courseId">
-          <el-input v-model="query.courseId" placeholder="courseId" style="width: 180px" />
+        <el-form-item label="课程">
+          <el-select
+            v-model="query.courseId"
+            clearable
+            placeholder="请选择课程"
+            style="width: 260px"
+            :disabled="!query.semester"
+          >
+            <el-option
+              v-for="item in courseOptions"
+              :key="item.courseId"
+              :label="item.courseName"
+              :value="item.courseId"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadStudents">查询学生</el-button>
+          <el-button type="primary" :disabled="!query.semester || !query.courseId" @click="loadStudents">
+            查询学生
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>

@@ -31,7 +31,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageContainer title="学生首页" description="展示个人学习统计概览，后续可扩展图表和学期切换。">
+  <PageContainer title="学生首页" description="展示个人学习统计概览。">
     <el-card v-loading="loading">
       <div class="skeleton-grid">
         <el-statistic title="已选课程" :value="stats?.selectedCourseCount ?? 0" />

@@ -36,7 +36,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageContainer title="管理员首页" description="首屏聚合数据与模块入口，后续可扩展为图表看板。">
+  <PageContainer title="管理员首页" description="展示系统核心统计数据与运行状态。">
     <el-card v-loading="loading">
       <div class="skeleton-grid">
         <el-statistic title="院系总数" :value="overview?.departmentCount ?? 0" />

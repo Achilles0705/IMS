@@ -1,18 +1,29 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 import { adminCourseGradeStatistics } from '@/api/admin/statistics'
 import PageContainer from '@/components/common/PageContainer.vue'
 import type { CourseGradeStatistics } from '@/types/api'
 import { ApiBusinessError } from '@/utils/request'
+import { uniqueSemestersFrom } from '@/utils/semester'
 
 const loading = ref(false)
+const allStatistics = ref<CourseGradeStatistics[]>([])
 const statistics = ref<CourseGradeStatistics[]>([])
 
 const query = reactive({
   semester: '',
   courseId: '',
+})
+
+const semesterOptions = computed(() => uniqueSemestersFrom(allStatistics.value, (item) => item.semester))
+
+const courseOptions = computed(() => {
+  if (!query.semester) {
+    return []
+  }
+  return allStatistics.value.filter((item) => item.semester === query.semester)
 })
 
 async function loadStatistics() {
@@ -33,20 +44,56 @@ async function loadStatistics() {
   }
 }
 
-onMounted(() => {
-  loadStatistics()
+async function loadAllStatistics() {
+  try {
+    allStatistics.value = await adminCourseGradeStatistics()
+  } catch (error) {
+    if (error instanceof ApiBusinessError) {
+      ElMessage.error(error.message)
+    }
+  }
+}
+
+function handleSemesterChange() {
+  query.courseId = ''
+}
+
+onMounted(async () => {
+  await loadAllStatistics()
+  await loadStatistics()
 })
 </script>
 
 <template>
-  <PageContainer title="统计分析" description="对应 /api/admin/statistics/course-grades 的查询页面骨架。">
+  <PageContainer title="统计分析" description="查看各课程选课人数与成绩分布统计。">
     <el-card>
       <el-form :inline="true">
         <el-form-item label="学期">
-          <el-input v-model="query.semester" clearable placeholder="例如 2025-Fall" style="width: 180px" />
+          <el-select
+            v-model="query.semester"
+            clearable
+            placeholder="全部学期"
+            style="width: 180px"
+            @change="handleSemesterChange"
+          >
+            <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="课程编号">
-          <el-input v-model="query.courseId" clearable placeholder="courseId" style="width: 180px" />
+        <el-form-item label="课程">
+          <el-select
+            v-model="query.courseId"
+            clearable
+            placeholder="全部课程"
+            style="width: 240px"
+            :disabled="!query.semester"
+          >
+            <el-option
+              v-for="item in courseOptions"
+              :key="item.courseId"
+              :label="item.courseName"
+              :value="item.courseId"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadStatistics">查询</el-button>

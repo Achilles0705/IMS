@@ -61,7 +61,7 @@ async function handleLogin() {
       <template #header>
         <div class="header">
           <h2>教学事务管理系统</h2>
-          <p>Vue 3 + Element Plus 前端基础框架</p>
+          <p>学分制教学事务管理</p>
         </div>
       </template>
 
@@ -78,13 +78,6 @@ async function handleLogin() {
           </el-select>
         </el-form-item>
       </el-form>
-
-      <el-alert
-        type="info"
-        show-icon
-        :closable="false"
-        title="当前为初始框架，登录逻辑已对接 /api/auth/login，具体账号以数据库和后端实现为准。"
-      />
 
       <el-button class="submit" type="primary" :loading="loading" @click="handleLogin">
         登录并进入系统

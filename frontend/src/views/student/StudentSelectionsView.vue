@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import { studentDeleteSelection, studentListSelections } from '@/api/student'
 import PageContainer from '@/components/common/PageContainer.vue'
 import type { SelectionRequest, StudentSelectionView } from '@/types/api'
 import { ApiBusinessError } from '@/utils/request'
+import { uniqueSemestersFrom } from '@/utils/semester'
 
 const loading = ref(false)
+const allSelections = ref<StudentSelectionView[]>([])
 const selections = ref<StudentSelectionView[]>([])
 
 const query = reactive({
@@ -20,12 +22,13 @@ const deleteModel = reactive<SelectionRequest>({
   staffId: '',
 })
 
-async function loadSelections() {
+const semesterOptions = computed(() => uniqueSemestersFrom(allSelections.value, (item) => item.semester))
+
+async function loadAllSelections() {
   loading.value = true
   try {
-    selections.value = await studentListSelections({
-      semester: query.semester || undefined,
-    })
+    allSelections.value = await studentListSelections()
+    applyFilter()
   } catch (error) {
     if (error instanceof ApiBusinessError) {
       ElMessage.error(error.message)
@@ -35,6 +38,14 @@ async function loadSelections() {
   } finally {
     loading.value = false
   }
+}
+
+function applyFilter() {
+  if (!query.semester) {
+    selections.value = allSelections.value
+    return
+  }
+  selections.value = allSelections.value.filter((item) => item.semester === query.semester)
 }
 
 function chooseSelection(row: StudentSelectionView) {
@@ -51,8 +62,8 @@ async function dropSelection() {
 
   try {
     await studentDeleteSelection(deleteModel)
-    ElMessage.success('退课请求已发送')
-    await loadSelections()
+    ElMessage.success('退课成功')
+    await loadAllSelections()
   } catch (error) {
     if (error instanceof ApiBusinessError) {
       ElMessage.error(error.message)
@@ -61,25 +72,33 @@ async function dropSelection() {
     ElMessage.error('退课失败')
   }
 }
+
+watch(
+  () => query.semester,
+  () => {
+    applyFilter()
+  },
+)
+
+onMounted(() => {
+  loadAllSelections()
+})
 </script>
 
 <template>
-  <PageContainer title="我的选课" description="对应 /api/student/selections 的查询与退课接口骨架。">
+  <PageContainer title="我的选课" description="查看已选课程，支持按学期筛选与退课。">
     <el-card>
       <el-form :inline="true">
         <el-form-item label="学期">
-          <el-input v-model="query.semester" clearable placeholder="不填查询全部" style="width: 180px" />
+          <el-select v-model="query.semester" clearable placeholder="全部学期" style="width: 180px">
+            <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadSelections">查询已选课程</el-button>
-          <el-button type="danger" plain @click="dropSelection">调用退课接口</el-button>
+          <el-button type="primary" @click="loadAllSelections">刷新</el-button>
+          <el-button type="danger" plain @click="dropSelection">退课</el-button>
         </el-form-item>
       </el-form>
-      <el-alert
-        title="点击表格行可自动填充退课参数（DELETE /api/student/selections 请求体）。"
-        type="info"
-        :closable="false"
-      />
     </el-card>
 
     <el-card v-loading="loading">

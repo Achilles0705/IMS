@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import { studentListGrades } from '@/api/student'
 import PageContainer from '@/components/common/PageContainer.vue'
 import type { StudentGradeView } from '@/types/api'
 import { ApiBusinessError } from '@/utils/request'
+import { uniqueSemestersFrom } from '@/utils/semester'
 
 const loading = ref(false)
+const allGrades = ref<StudentGradeView[]>([])
 const grades = ref<StudentGradeView[]>([])
 
 const query = reactive({
   semester: '',
 })
 
-async function loadGrades() {
+const semesterOptions = computed(() => uniqueSemestersFrom(allGrades.value, (item) => item.semester))
+
+async function loadAllGrades() {
   loading.value = true
   try {
-    grades.value = await studentListGrades({
-      semester: query.semester || undefined,
-    })
+    allGrades.value = await studentListGrades()
+    applyFilter()
   } catch (error) {
     if (error instanceof ApiBusinessError) {
       ElMessage.error(error.message)
@@ -30,17 +33,38 @@ async function loadGrades() {
     loading.value = false
   }
 }
+
+function applyFilter() {
+  if (!query.semester) {
+    grades.value = allGrades.value
+    return
+  }
+  grades.value = allGrades.value.filter((item) => item.semester === query.semester)
+}
+
+watch(
+  () => query.semester,
+  () => {
+    applyFilter()
+  },
+)
+
+onMounted(() => {
+  loadAllGrades()
+})
 </script>
 
 <template>
-  <PageContainer title="我的成绩" description="对应 /api/student/grades 查询接口骨架。">
+  <PageContainer title="我的成绩" description="查看各学期课程成绩及通过情况。">
     <el-card>
       <el-form :inline="true">
         <el-form-item label="学期">
-          <el-input v-model="query.semester" clearable placeholder="不填查询全部" style="width: 180px" />
+          <el-select v-model="query.semester" clearable placeholder="全部学期" style="width: 180px">
+            <el-option v-for="item in semesterOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadGrades">查询成绩</el-button>
+          <el-button type="primary" @click="loadAllGrades">刷新</el-button>
         </el-form-item>
       </el-form>
     </el-card>
